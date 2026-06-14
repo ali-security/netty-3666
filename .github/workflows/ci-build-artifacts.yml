@@ -62,6 +62,20 @@ jobs:
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
 
+      # nexus-staging-maven-plugin:1.7.0 validates that the server id
+      # referenced by the parent pom (`central-portal-snapshots`) exists in
+      # settings.xml even when skipRemoteStaging=true. The host's
+      # ~/.m2/settings.xml is mounted into the docker container.
+      - name: Set up Maven settings for staging
+        uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "central-portal-snapshots",
+              "username": "dummy",
+              "password": "dummy"
+            }]
+
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
 
@@ -113,6 +127,16 @@ jobs:
 
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
+
+      - name: Set up Maven settings for staging
+        uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "central-portal-snapshots",
+              "username": "dummy",
+              "password": "dummy"
+            }]
 
       - name: Stage snapshots to local staging directory
         run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/local-staging -DskipTests=true
@@ -167,6 +191,16 @@ jobs:
         uses: crazy-max/ghaction-chocolatey@v3
         with:
           args: install ninja nasm
+
+      - name: Set up Maven settings for staging
+        uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "central-portal-snapshots",
+              "username": "dummy",
+              "password": "dummy"
+            }]
 
       - name: Stage snapshots to local staging directory
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/local-staging -DskipTests=true
@@ -240,6 +274,16 @@ jobs:
 
       - name: Copy previous build artifacts to local maven repository
         run: bash ./.github/scripts/local_staging_install_snapshot.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
+
+      - name: Set up Maven settings for staging
+        uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "central-portal-snapshots",
+              "username": "dummy",
+              "password": "dummy"
+            }]
 
       - name: Generate netty-codec-http3 and deploy to local staging.
         run: |
