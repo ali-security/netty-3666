@@ -62,20 +62,6 @@ jobs:
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
 
-      # nexus-staging-maven-plugin:1.7.0 validates that the server id
-      # referenced by the parent pom (`central-portal-snapshots`) exists in
-      # settings.xml even when skipRemoteStaging=true. The host's
-      # ~/.m2/settings.xml is mounted into the docker container.
-      - name: Set up Maven settings for staging
-        uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "central-portal-snapshots",
-              "username": "dummy",
-              "password": "dummy"
-            }]
-
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
 
@@ -128,18 +114,8 @@ jobs:
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
 
-      - name: Set up Maven settings for staging
-        uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "central-portal-snapshots",
-              "username": "dummy",
-              "password": "dummy"
-            }]
-
       - name: Stage snapshots to local staging directory
-        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/local-staging -DskipTests=true
+        run: ./mvnw -B -ntp clean deploy -DaltDeploymentRepository=local-staging::default::file://$HOME/local-staging -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -192,18 +168,8 @@ jobs:
         with:
           args: install ninja nasm
 
-      - name: Set up Maven settings for staging
-        uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "central-portal-snapshots",
-              "username": "dummy",
-              "password": "dummy"
-            }]
-
       - name: Stage snapshots to local staging directory
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/local-staging -DskipTests=true
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean deploy "-DaltDeploymentRepository=local-staging::default::file:///local-staging" -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -273,30 +239,28 @@ jobs:
           path: ~/linux-x86_64-java11-local-staging
 
       - name: Copy previous build artifacts to local maven repository
-        run: bash ./.github/scripts/local_staging_install_snapshot.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
-
-      - name: Set up Maven settings for staging
-        uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "central-portal-snapshots",
-              "username": "dummy",
-              "password": "dummy"
-            }]
+        run: |
+          mkdir -p ~/.m2/repository
+          for d in ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging; do
+            cp -r "$d"/. ~/.m2/repository/
+          done
 
       - name: Generate netty-codec-http3 and deploy to local staging.
         run: |
           mkdir -p ~/codec-http3-local-staging
-          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/codec-http3-local-staging -DskipTests=true
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean deploy -DaltDeploymentRepository=local-staging::default::file://$HOME/codec-http3-local-staging -DskipTests=true
 
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean deploy -DaltDeploymentRepository=local-staging::default::file://$HOME/all-local-staging -DskipTests=true
 
       - name: Merge staging repositories
-        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/codec-http3-local-staging ~/all-local-staging
+        run: |
+          mkdir -p ~/local-staging
+          for d in ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/codec-http3-local-staging ~/all-local-staging; do
+            cp -r "$d"/. ~/local-staging/
+          done
 
       - name: Upload merged staging artifact
         uses: actions/upload-artifact@v4
