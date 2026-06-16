@@ -16,6 +16,7 @@ services:
       - GPG_PASSPHRASE
       - GPG_PRIVATE_KEY
       - MAVEN_OPTS
+      - EXTRA_MVN_ARGS
     volumes:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg
@@ -32,7 +33,7 @@ services:
   build:
     <<: *common
     command: '/bin/bash -cl "
-      ./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true && 
+      ./mvnw -B -ntp clean install ${EXTRA_MVN_ARGS:-} -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true &&
       cd testsuite-shading &&
       ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
     "'
